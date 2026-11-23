@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>STM32C5 官方例程查询</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --blue: #0088c7;
+      --blue-dark: #006a9c;
+      --ink: #1d2b36;
+      --muted: #647684;
+      --line: #d7e2e9;
+      --paper: #fff;
+      --canvas: #f2f6f8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--ink);
+      font: 14px/1.5 "Segoe UI", "Microsoft YaHei", sans-serif;
+    }
+    header {
+      background: linear-gradient(115deg, #073b5b, #0879ad);
+      color: white;
+      padding: 28px max(22px, calc((100% - 1320px) / 2));
+    }
+    header h1 { margin: 0 0 5px; font-size: 25px; letter-spacing: .2px; }
+    header p { margin: 0; color: #d6edf8; }
+    main { max-width: 1320px; margin: 22px auto; padding: 0 18px 40px; }
+    .notice {
+      background: #e8f5fb;
+      border: 1px solid #c7e6f4;
+      border-radius: 6px;
+      color: #31596d;
+      margin-bottom: 14px;
+      padding: 10px 13px;
+    }
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(240px, 1fr) 190px 220px auto;
+      gap: 10px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 7px 7px 0 0;
+      padding: 13px;
+    }
+    input, select, button {
+      border: 1px solid #c5d3dc;
+      border-radius: 4px;
+      background: white;
+      color: var(--ink);
+      font: inherit;
+      min-height: 38px;
+      padding: 7px 10px;
+    }
+    input:focus, select:focus { outline: 2px solid #8ccfea; outline-offset: 1px; }
+    button { cursor: pointer; }
+    button:hover { border-color: var(--blue); color: var(--blue-dark); }
+    .table-wrap {
+      overflow: auto;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-top: 0;
+      border-radius: 0 0 7px 7px;
+    }
+    table { border-collapse: collapse; min-width: 900px; width: 100%; }
+    th {
+      position: sticky;
+      top: 0;
+      background: var(--blue);
+      color: white;
+      font-weight: 600;
+      padding: 10px 11px;
+      text-align: left;
+      white-space: nowrap;
+    }
+    td { border-top: 1px solid var(--line); padding: 10px 11px; vertical-align: top; }
+    tbody tr:nth-child(even) { background: #f7fafc; }
+    tbody tr:hover { background: #edf7fc; }
+    .name { color: #075d88; font-weight: 650; }
+    .desc { min-width: 310px; max-width: 620px; }
+    .tag {
+      display: inline-block;
+      background: #e5f3fa;
+      border-radius: 3px;
+      color: #17668d;
+      margin: 1px 3px 2px 0;
+      padding: 2px 6px;
+      white-space: nowrap;
+    }
+    a { color: #006c9e; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--muted);
+      gap: 12px;
+      margin: 10px 2px;
+    }
+    .status { color: #31596d; }
+    .status.error { color: #a52b2b; }
+    .empty { color: var(--muted); padding: 28px; text-align: center; }
+    details { margin-top: 6px; }
+    details summary { color: #16739d; cursor: pointer; font-size: 12px; }
+    details p { margin: 5px 0 0; }
+    footer { color: var(--muted); font-size: 12px; margin-top: 14px; }
+    @media (max-width: 760px) {
+      header { padding: 22px 18px; }
+      .toolbar { grid-template-columns: 1fr; }
+      .meta { align-items: flex-start; flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>STM32C5 例程目录</h1>
+    <p>按类别、外设、开发板或功能描述查找官方示例</p>
+  </header>
+  <main>
+    <div class="notice">
+      例程信息从 ST 官方 GitHub 仓库在线读取，首次加载需要联网。目录跟随仓库 main 分支，可能与本地固件包版本不同；打开例程前请核对版本和开发板。
+    </div>
+    <section class="toolbar" aria-label="例程筛选">
+      <input id="query" type="search" placeholder="搜索例程名、外设或功能描述…" aria-label="搜索">
+      <select id="category" aria-label="例程类别">
+        <option value="">全部类别</option>
+      </select>
+      <select id="board" aria-label="开发板">
+        <option value="">全部开发板</option>
+      </select>
+      <button id="reload" type="button">重新加载</button>
+    </section>
+    <div class="meta">
+      <span id="status" class="status" role="status">正在读取官方例程目录…</span>
+      <span id="count"></span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>类别</th>
+            <th>外设 / 模块</th>
+            <th>例程名称</th>
+            <th>功能描述</th>
+            <th>开发板</th>
+            <th>官方说明</th>
+          </tr>
+        </thead>
+        <tbody id="results">
+          <tr><td class="empty" colspan="6">正在加载，请稍候…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <footer>
+      数据来源：
+      <a href="https://github.com/STMicroelectronics/STM32CubeC5/tree/main/examples" target="_blank" rel="noopener">STMicroelectronics / STM32CubeC5 / examples</a>
+      · 页面只索引官方 README，不替代对应版本固件包中的说明。
+    </footer>
+  </main>
+  <script>
+    (() => {
+      "use strict";
+      const owner = "STMicroelectronics";
+      const repo = "STM32CubeC5";
+      const branch = "main";
+      const api = `https://api.github.com/repos/${owner}/${repo}`;
+      const raw = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}`;
+      const $ = (id) => document.getElementById(id);
+      const status = $("status");
+      const results = $("results");
+      const categoryFilter = $("category");
+      const boardFilter = $("board");
+      let allRows = [];
+
+      function setStatus(message, isError) {
+        status.textContent = message;
+        status.className = isError ? "status error" : "status";
+      }
+
+      function extractSummary(markdown) {
+        const cleaned = markdown
+          .replace(/<img\b[^>]*>/gi, " ")
+          .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+          .replace(/\[[^\]]*\]\([^)]*\)/g, " ")
+          .replace(/```[\s\S]*?```/g, " ")
+          .replace(/`([^`]*)`/g, "$1")
+          .replace(/<[^>]*>/g, " ")
+          .replace(/[*_>#]/g, " ")
+          .replace(/\r/g, "");
+        const lines = cleaned.split("\n").map(line => line.trim()).filter(Boolean);
+        const titleIndex = lines.findIndex(line => /^Example\s*:/i.test(line));
+        let summary = "";
+        for (let i = Math.max(0, titleIndex + 1); i < lines.length; i++) {
+          const line = lines[i];
+          if (/^Example version/i.test(line)) continue;
+          if (/^([0-9]+\.|Detailed scenario|Example configuration)/i.test(line)) break;
+          if (/^An offline version/i.test(line) || /^User Manual$/i.test(line)) continue;
+          if (line.length > 10) {
+            summary = line;
+            break;
+          }
+        }
+        return { summary: summary || "请查看官方 README 获取例程说明。" };
+      }
+
+      function boardNames(paths) {
+        const boards = new Set();
+        for (const path of paths) {
+          for (const part of path.split("/")) {
+            if (/^NUCLEO-[A-Z0-9]+$/i.test(part)) boards.add(part);
+          }
+        }
+        return [...boards].sort();
+      }
+
+      async function fetchJson(url) {
+        const response = await fetch(url, { headers: { Accept: "application/vnd.github+json" } });
+        if (!response.ok) throw new Error(`GitHub 请求失败 (${response.status})`);
+        return response.json();
+      }
+
+      async function loadRows() {
+        const categoryListing = await fetchJson(`${api}/contents/examples?ref=${branch}`);
+        const categoryDirs = categoryListing.filter(item => item.type === "dir");
+        const trees = await Promise.all(categoryDirs.map(async item => {
+          const tree = await fetchJson(`${api}/git/trees/${item.sha}?recursive=1`);
+          if (tree.truncated) throw new Error(`${item.name} 目录超出 GitHub API 返回上限，无法保证清单完整`);
+          return tree.tree
+            .filter(file => file.type === "blob")
+            .map(file => ({ ...file, path: `examples/${item.name}/${file.path}` }));
+        }));
+        const files = trees.flat();
+        const readmes = files.filter(item => {
+          const parts = item.path.split("/");
+          return /^readme\.md$/i.test(parts[parts.length - 1]) && parts.length >= 4;
+        });
+        return readmes.map(readme => {
+          const pathParts = readme.path.split("/").slice(1);
+          const category = pathParts[0];
+          const examplePath = pathParts.slice(1, -1).join("/");
+          const exampleName = pathParts[pathParts.length - 2] || examplePath;
+          const prefix = `examples/${category}/${examplePath}/`;
+          const exampleFiles = files.filter(file => file.path.startsWith(prefix));
+          const boards = boardNames(exampleFiles.map(file => file.path));
+          return {
+            category,
+            group: pathParts[1] || category,
+            exampleName,
+            examplePath,
+            githubUrl: `https://github.com/${owner}/${repo}/tree/${branch}/examples/${category}/${examplePath}`,
+            boards,
+            readmeUrl: `${raw}/${readme.path}`,
+            description: "正在读取说明…"
+          };
+        });
+      }
+
+      function addOption(select, value, label) {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label;
+        select.append(option);
+      }
+
+      function cell(text, className) {
+        const td = document.createElement("td");
+        if (className) td.className = className;
+        td.textContent = text;
+        return td;
+      }
+
+      function render() {
+        const query = $("query").value.trim().toLocaleLowerCase();
+        const category = categoryFilter.value;
+        const board = boardFilter.value;
+        const visible = allRows.filter(row => {
+          const haystack = [row.category, row.group, row.exampleName, row.description, row.boards.join(" ")]
+            .join(" ").toLocaleLowerCase();
+          return (!query || haystack.includes(query))
+            && (!category || row.category === category)
+            && (!board || row.boards.includes(board));
+        });
+        $("count").textContent = `显示 ${visible.length} / ${allRows.length} 个例程`;
+        results.replaceChildren();
+        if (!visible.length) {
+          const tr = document.createElement("tr");
+          const td = cell("没有找到匹配的例程。", "empty");
+          td.colSpan = 6;
+          tr.append(td);
+          results.append(tr);
+          return;
+        }
+        for (const row of visible) {
+          const tr = document.createElement("tr");
+          tr.append(cell(row.category.toUpperCase()));
+          tr.append(cell(row.group.toUpperCase()));
+          const name = document.createElement("td");
+          name.className = "name";
+          name.textContent = row.exampleName;
+          tr.append(name);
+          const description = document.createElement("td");
+          description.className = "desc";
+          description.textContent = row.description;
+          tr.append(description);
+          const boardCell = document.createElement("td");
+          boardCell.textContent = row.boards.length ? row.boards.join(", ") : "README 中未识别";
+          tr.append(boardCell);
+          const linkCell = document.createElement("td");
+          const link = document.createElement("a");
+          link.href = row.readmeUrl;
+          link.target = "_blank";
+          link.rel = "noopener";
+          link.textContent = "README";
+          linkCell.append(link, document.createTextNode(" · "));
+          const folder = document.createElement("a");
+          folder.href = row.githubUrl;
+          folder.target = "_blank";
+          folder.rel = "noopener";
+          folder.textContent = "源码目录";
+          linkCell.append(folder);
+          tr.append(linkCell);
+          results.append(tr);
+        }
+      }
+
+      async function load() {
+        $("reload").disabled = true;
+        results.replaceChildren();
+        const loadingRow = document.createElement("tr");
+        const loadingCell = cell("正在加载官方目录与 README…", "empty");
+        loadingCell.colSpan = 6;
+        loadingRow.append(loadingCell);
+        results.append(loadingRow);
+        allRows = [];
+        $("count").textContent = "";
+        setStatus("正在连接 ST 官方 GitHub…", false);
+        try {
+          const loaded = await loadRows();
+          allRows = loaded.sort((a, b) =>
+            a.category.localeCompare(b.category) || a.group.localeCompare(b.group) || a.exampleName.localeCompare(b.exampleName));
+          categoryFilter.replaceChildren();
+          boardFilter.replaceChildren();
+          addOption(categoryFilter, "", "全部类别");
+          addOption(boardFilter, "", "全部开发板");
+          const categoryNames = [...new Set(allRows.map(row => row.category))].sort();
+          for (const item of categoryNames) addOption(categoryFilter, item, item.toUpperCase());
+          const boards = [...new Set(allRows.flatMap(row => row.boards))].sort();
+          for (const item of boards) addOption(boardFilter, item, item);
+          render();
+          setStatus(`已发现 ${loaded.length} 个例程，正在解析官方说明…`, false);
+          const batchSize = 12;
+          for (let i = 0; i < loaded.length; i += batchSize) {
+            await Promise.all(loaded.slice(i, i + batchSize).map(async row => {
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 12000);
+              try {
+                const response = await fetch(row.readmeUrl, { signal: controller.signal });
+                if (!response.ok) throw new Error(`README 请求失败 (${response.status})`);
+                const info = extractSummary(await response.text());
+                row.description = info.summary;
+              } catch {
+                row.description = "暂时无法读取 README，请打开官方页面查看。";
+              } finally {
+                clearTimeout(timeoutId);
+              }
+            }));
+            render();
+            setStatus(`正在读取官方说明：${Math.min(i + batchSize, loaded.length)} / ${loaded.length}`, false);
+          }
+          render();
+          if (!allRows.length) {
+            setStatus("没有读取到例程。请检查网络连接，或稍后重试。", true);
+          } else {
+            setStatus(`已从 ST 官方仓库读取 ${allRows.length} 个例程。`, false);
+          }
+        } catch (error) {
+          console.error(error);
+          setStatus(`${error.message}。请检查网络连接后重试。`, true);
+          results.replaceChildren();
+          const tr = document.createElement("tr");
+          const td = cell("目录加载失败。", "empty");
+          td.colSpan = 6;
+          tr.append(td);
+          results.append(tr);
+        } finally {
+          $("reload").disabled = false;
+        }
+      }
+
+      $("query").addEventListener("input", render);
+      categoryFilter.addEventListener("change", render);
+      boardFilter.addEventListener("change", render);
+      $("reload").addEventListener("click", () => {
+        categoryFilter.value = "";
+        boardFilter.value = "";
+        load();
+      });
+      load();
+    })();
+  </script>
+</body>
+</html>
